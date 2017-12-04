@@ -1,0 +1,92 @@
+--blobby color mouse grid thing
+-- by Mumberthrax
+
+local width, height = 0, 0
+local mouseX, mouseY = 0, 0
+
+function love.load()
+  love.window.setMode(1024,768)
+  --love.window.setFullscreen(true)
+  --love.window.setMode(400,300)
+  love.graphics.setBackgroundColor(0,0,0)
+  width, height = love.window.getMode()
+  love.graphics.setLineWidth(2)
+end
+
+function love.update(dt)
+  mouseX, mouseY = love.mouse.getPosition()
+end
+
+function love.draw()
+  -- every frame, look at every square, check it's distance to the cursor and the nearest corner
+  -- depending on it's position in that range, adjust it's color
+  for x = 0, width, 20 do
+    for y = 0, height,20 do
+      local r,g,b = getCellColor(x,y)
+      love.graphics.setColor(r,g,b)
+      love.graphics.rectangle("fill",x,y,20,20)
+    end
+  end
+  paintGrid()
+end
+
+--[[
+function love.mousepressed(x,y,button)
+  if button == 1 then
+    love.window.setFullscreen(not love.window.getFullscreen())
+    width, height = love.window.getMode()
+  end
+end
+--]]
+
+function paintGrid()
+  -- paint white grid overlay
+  love.graphics.setColor(50,50,50)
+  for i = 0, width, 20 do
+    love.graphics.line(i,0, i,height)
+  end
+  for i = 0, height, 20 do
+    love.graphics.line(0,i, width,i)
+  end
+end
+
+
+function getCellColor(x,y)
+  local distToMouse = dist(x,y,mouseX, mouseY)
+  -- get distance from current square to nearest corner
+  local nearestcornerdist = math.min(
+    dist(x,y,0,0),
+    dist(x,y,width,0),
+    dist(x,y,0,height),
+    dist(x,y,width,height)
+  )
+  local scaleceiling = nearestcornerdist + distToMouse
+  local cellHue = map(distToMouse,0,scaleceiling, 0,255)
+  return HSL(cellHue,255,100)
+end
+
+-- distance from point a to point b
+function dist (ax, ay, bx, by)
+  return math.sqrt((ax-bx)^2 + (ay - by)^2)
+end
+
+-- Map x in old range(a,b) to new range(c,d)
+function map (x,a,b,c,d)
+  return (x-a)/(b-a)*(d-c)+c
+end
+
+-- Converts HSL to RGB. (input and output range: 0 - 255)
+function HSL(h, s, l, a)
+	if s<=0 then return l,l,l,a end
+	h, s, l = h/256*6, s/255, l/255
+	local c = (1-math.abs(2*l-1))*s
+	local x = (1-math.abs(h%2-1))*c
+	local m,r,g,b = (l-.5*c), 0,0,0
+	if h < 1     then r,g,b = c,x,0
+	elseif h < 2 then r,g,b = x,c,0
+	elseif h < 3 then r,g,b = 0,c,x
+	elseif h < 4 then r,g,b = 0,x,c
+	elseif h < 5 then r,g,b = x,0,c
+	else              r,g,b = c,0,x
+	end return (r+m)*255,(g+m)*255,(b+m)*255,a
+end
